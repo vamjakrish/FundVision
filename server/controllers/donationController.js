@@ -90,7 +90,7 @@ const verifyPayment = async (req, res, next) => {
         razorpaySignature
       },
       { new: true }
-    ).populate('campaign').populate('donor', 'name email');
+    ).populate('campaign').populate('donor', 'name email').populate('organization', 'name logo');
 
     if (!donation) return res.status(404).json({ success: false, message: 'Donation not found.' });
 

@@ -233,6 +233,8 @@ function DonationSuccess({ donationData, finalAmount, impactMessage }) {
       transactionId: blockchain?.transactionId || donationData?.donation?.razorpayPaymentId || donationId || 'N/A',
       date: donationData?.donation?.createdAt || new Date(),
       receiptNumber: donationData?.donation?.receiptNumber,
+      organizationName: donationData?.donation?.organization?.name || donationData?.donation?.campaign?.organization?.name || 'FundVision',
+      is80GEligible: donationData?.donation?.taxExemption?.eligible !== false,
     });
   };
 

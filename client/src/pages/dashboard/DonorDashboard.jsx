@@ -128,6 +128,8 @@ export default function DonorDashboard() {
                           transactionId: d.blockchain?.transactionId || d.razorpayPaymentId || d._id,
                           date: d.createdAt,
                           receiptNumber: d.receiptNumber,
+                          organizationName: d.organization?.name || 'FundVision',
+                          is80GEligible: d.taxExemption?.eligible !== false,
                         })}
                         className="p-1.5 hover:bg-white rounded-lg transition-colors"
                         title="Download Certificate"
