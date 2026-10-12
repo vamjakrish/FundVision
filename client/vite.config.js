@@ -10,8 +10,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:5000', changeOrigin: true },
-      '/socket.io': { target: 'http://localhost:5000', changeOrigin: true, ws: true }
+      '/api': { target: 'https://fundvision-8d1c.onrender.com', changeOrigin: true },
+      '/socket.io': { target: 'https://fundvision-8d1c.onrender.com', changeOrigin: true, ws: true }
     }
   }
 });
