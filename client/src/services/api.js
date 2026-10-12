@@ -1,12 +1,14 @@
 import axios from 'axios';
 
-// const api = axios.create({
-//   baseURL: '/api',
-//   timeout: 30000,
-//   headers: { 'Content-Type': 'application/json' }
-// });
-
 const API_URL = 'https://fundvision-8d1c.onrender.com/api';
+
+const api = axios.create({
+  baseURL: API_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 // Response interceptor
 api.interceptors.response.use(
