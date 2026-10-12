@@ -1,3 +1,4 @@
+
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
@@ -8,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 dotenv.config();
+
 const connectDB = require('./config/database');
 const { initSocket } = require('./socket/socketManager');
 
@@ -27,32 +29,84 @@ const proofRoutes = require('./routes/proofs');
 const app = express();
 const server = http.createServer(app);
 
-// Connect to MongoDB
-connectDB();
+// Allowed frontend origins
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+]
+  .filter(Boolean)
+  .map((origin) => origin.replace(/\/+$/, ''));
 
-// Initialize Socket.io
-initSocket(server);
+// CORS configuration
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests without Origin, e.g. server-side health checks.
+    if (!origin) {
+      return callback(null, true);
+    }
 
-// Security Middleware
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({
-  origin: [process.env.CLIENT_URL || 'http://localhost:5173', 'http://localhost:3000'],
+    const normalizedOrigin = origin.replace(/\/+$/, '');
+
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    console.warn(`CORS blocked origin: ${origin}`);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  methods: [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+  ],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+  ],
+};
 
-// Rate Limiting
+// Security middleware
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: 'cross-origin',
+    },
+  })
+);
+
+// CORS must run before API routes and rate limiting
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options(/.*/, cors(corsOptions));
+
+// Request parsing
+app.use(express.json({ limit: '50mb' }));
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: '50mb',
+  })
+);
+
+// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
-  message: { success: false, message: 'Too many requests, please try again later.' }
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: 'Too many requests, please try again later.',
+  },
 });
-app.use('/api', limiter);
 
-// Body Parsing
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use('/api', limiter);
 
 // Logging
 if (process.env.NODE_ENV === 'development') {
@@ -60,19 +114,22 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, 'uploads'))
+);
 
-// Health Check
+// Health check
 app.get('/api/health', (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
     message: 'FundVision API is running',
     version: '2.0.0',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
-// API Routes
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/campaigns', campaignRoutes);
@@ -85,27 +142,51 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/blockchain', blockchainRoutes);
 app.use('/api', proofRoutes);
 
-// 404 Handler
-app.use('*', (req, res) => {
-  res.status(404).json({ success: false, message: 'Route not found' });
-});
-
-// Global Error Handler
-app.use((err, req, res, next) => {
-  console.error('Error:', err.stack);
-  const statusCode = err.statusCode || 500;
-  res.status(statusCode).json({
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
     success: false,
-    message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    message: 'Route not found',
   });
 });
 
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Error:', err.message);
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const statusCode = err.statusCode || 500;
+
+  res.status(statusCode).json({
+    success: false,
+    message:
+      err.message === 'Not allowed by CORS'
+        ? 'Origin is not allowed by CORS'
+        : err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && {
+      stack: err.stack,
+    }),
+  });
+});
+
+// Initialize Socket.IO
+// Note: socketManager.js must also configure its own CORS origins.
+initSocket(server);
+
+// Connect to MongoDB
+connectDB();
+
+// Start server
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, () => {
-  console.log(`\n🚀 FundVision Server running on port ${PORT}`);
-  console.log(`📡 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🌐 API: http://localhost:${PORT}/api\n`);
+  console.log(`\nFundVision Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'production'}`);
+  console.log(`Allowed frontend origins: ${allowedOrigins.join(', ')}`);
+  console.log(`API health endpoint: /api/health\n`);
 });
 
 module.exports = { app, server };
