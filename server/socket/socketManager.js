@@ -5,13 +5,13 @@ const User = require('../models/User');
 let io;
 
 const initSocket = (server) => {
-  io = new Server(server, {
-    cors: {
-      origin: [process.env.CLIENT_URL || 'http://localhost:5173'],
-      methods: ['GET', 'POST'],
-      credentials: true
-    }
-  });
+io = new Server(server, {
+  cors: {
+    origin: 'https://fund-vision-git-main-vamjakrishs-projects.vercel.app',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
 
   // Auth middleware for socket
   io.use(async (socket, next) => {
