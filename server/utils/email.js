@@ -1,14 +1,6 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const templates = {
   emailVerification: ({ name, verifyUrl }) => ({
@@ -81,14 +73,14 @@ const sendEmail = async ({ to, subject, template, data, html }) => {
       emailContent = templates[template](data);
     }
 
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'FundVision <noreply@fundvision.com>',
+    const info = await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'FundVision <onboarding@resend.dev>',
       to,
       subject: emailContent.subject,
       html: emailContent.html
     });
 
-    console.log(`📧 Email sent to ${to}: ${info.messageId}`);
+    console.log(`📧 Email sent to ${to}: ${info.id}`);
     return info;
   } catch (error) {
     console.error('Email error:', error.message);

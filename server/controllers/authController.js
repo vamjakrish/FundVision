@@ -24,19 +24,17 @@ const register = async (req, res, next) => {
     const verificationToken = user.generateEmailVerificationToken();
     await user.save({ validateBeforeSave: false });
     
-    // Send verification email
+    // Send verification email in background so registration responds immediately
     const clientBaseUrl = process.env.CLIENT_URL || 'https://fund-vision-kappa.vercel.app';
     const verifyUrl = `${clientBaseUrl}/verify-email/${verificationToken}`;
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Welcome to FundVision - Verify Your Email',
-        template: 'emailVerification',
-        data: { name: user.name, verifyUrl }
-      });
-    } catch (emailError) {
+    sendEmail({
+      to: user.email,
+      subject: 'Welcome to FundVision - Verify Your Email',
+      template: 'emailVerification',
+      data: { name: user.name, verifyUrl }
+    }).catch(emailError => {
       console.error('Email send error:', emailError.message);
-    }
+    });
     
     const token = generateToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
