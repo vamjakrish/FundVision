@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_URL = 'https://fundvision-8d1c.onrender.com/api';
+const rawApiUrl = import.meta.env.VITE_API_URL || 'https://fundvision-8d1c.onrender.com/api';
+export const API_URL = rawApiUrl.replace(/\/+$/, '').endsWith('/api')
+  ? rawApiUrl.replace(/\/+$/, '')
+  : `${rawApiUrl.replace(/\/+$/, '')}/api`;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -10,17 +13,41 @@ const api = axios.create({
   },
 });
 
+// Request interceptor to attach JWT token if present
+api.interceptors.request.use(
+  (config) => {
+    if (!config.headers['Authorization']) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('fundvision-auth') || '{}');
+        const token = stored?.state?.token;
+        if (token) {
+          config.headers['Authorization'] = `Bearer ${token}`;
+        }
+      } catch {
+        // Ignore parse error
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response interceptor
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+    const isAuthRoute =
+      original?.url?.includes('/auth/login') ||
+      original?.url?.includes('/auth/register') ||
+      original?.url?.includes('/auth/refresh-token');
+
+    if (error.response?.status === 401 && !original._retry && !isAuthRoute) {
       original._retry = true;
       try {
         const { refreshToken } = JSON.parse(localStorage.getItem('fundvision-auth') || '{}')?.state || {};
         if (refreshToken) {
-          const { data } = await axios.post('/api/auth/refresh-token', { refreshToken });
+          const { data } = await axios.post(`${API_URL}/auth/refresh-token`, { refreshToken });
           api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
           original.headers['Authorization'] = `Bearer ${data.token}`;
           // Update store

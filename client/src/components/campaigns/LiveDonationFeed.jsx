@@ -18,12 +18,17 @@ export default function LiveDonationFeed({ className = '', maxItems = MAX_ITEMS,
       setFeed((prev) => [{ ...data, _key: `${data.id || Date.now()}-${Math.random()}` }, ...prev].slice(0, maxItems));
     };
 
+    const handleConnect = () => setConnected(true);
+    const handleDisconnect = () => setConnected(false);
+
     setConnected(socket.connected);
-    socket.on('connect', () => setConnected(true));
-    socket.on('disconnect', () => setConnected(false));
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
     socket.on('live_donation', handleDonation);
 
     return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
       socket.off('live_donation', handleDonation);
     };
   }, [maxItems]);

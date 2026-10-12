@@ -66,7 +66,7 @@ const templates = {
             : `Your organization <strong>${orgName}</strong> verification status: <strong>${status}</strong>.${note ? ` Note: ${note}` : ''}`
           }</p>
           <div style="text-align:center;margin:32px 0">
-            <a href="${process.env.CLIENT_URL}/dashboard" style="background:linear-gradient(135deg,#2563EB,#10B981);color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600">Go to Dashboard</a>
+            <a href="${process.env.CLIENT_URL || 'https://fund-vision-kappa.vercel.app'}/dashboard" style="background:linear-gradient(135deg,#2563EB,#10B981);color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600">Go to Dashboard</a>
           </div>
         </div>
       </div>

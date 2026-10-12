@@ -25,7 +25,8 @@ const register = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
     
     // Send verification email
-    const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
+    const clientBaseUrl = process.env.CLIENT_URL || 'https://fund-vision-kappa.vercel.app';
+    const verifyUrl = `${clientBaseUrl}/verify-email/${verificationToken}`;
     try {
       await sendEmail({
         to: user.email,
@@ -140,7 +141,8 @@ const forgotPassword = async (req, res, next) => {
     const resetToken = user.generateResetPasswordToken();
     await user.save({ validateBeforeSave: false });
     
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+    const clientBaseUrl = process.env.CLIENT_URL || 'https://fund-vision-kappa.vercel.app';
+    const resetUrl = `${clientBaseUrl}/reset-password/${resetToken}`;
     
     try {
       await sendEmail({

@@ -4,14 +4,32 @@ const User = require('../models/User');
 
 let io;
 
+const allowedOrigins = [
+  'https://fund-vision-kappa.vercel.app',
+  'https://fund-vision-git-main-vamjakrishs-projects.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map(s => s.trim()) : [])
+];
+
 const initSocket = (server) => {
-io = new Server(server, {
-  cors: {
-    origin: 'https://fund-vision-git-main-vamjakrishs-projects.vercel.app',
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
-});
+  io = new Server(server, {
+    cors: {
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const isExplicit = allowedOrigins.some(o => o.toLowerCase() === origin.toLowerCase());
+        const isVercel = /^https:\/\/[a-zA-Z0-9_.-]+\.vercel\.app$/.test(origin);
+        const isLocal = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+        if (isExplicit || isVercel || isLocal) {
+          return callback(null, true);
+        }
+        return callback(null, true);
+      },
+      methods: ['GET', 'POST'],
+      credentials: true
+    }
+  });
 
   // Auth middleware for socket
   io.use(async (socket, next) => {

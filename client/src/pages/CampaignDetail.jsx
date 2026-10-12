@@ -85,10 +85,19 @@ export default function CampaignDetail() {
     setBookmarked(campaign.bookmarks?.includes(user?._id));
     joinCampaign(campaign._id);
     const socket = getSocket();
+    const handleNewDonation = (data) => {
+      setLiveStats(data);
+      qc.invalidateQueries(['campaign', id]);
+    };
     if (socket) {
-      socket.on('new_donation', (data) => { setLiveStats(data); qc.invalidateQueries(['campaign', id]); });
+      socket.on('new_donation', handleNewDonation);
     }
-    return () => leaveCampaign(campaign._id);
+    return () => {
+      leaveCampaign(campaign._id);
+      if (socket) {
+        socket.off('new_donation', handleNewDonation);
+      }
+    };
   }, [campaign]);
 
   useEffect(() => {

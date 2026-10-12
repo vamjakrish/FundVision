@@ -33,26 +33,72 @@ connectDB();
 // Initialize Socket.io
 initSocket(server);
 
-// Security Middleware
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+// Enable trust proxy for Render and other reverse proxies
+app.set('trust proxy', 1);
 
-app.use(cors({
-  origin: [
-    'https://fund-vision-git-main-vamjakrishs-projects.vercel.app'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+// Security Middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginEmbedderPolicy: false
 }));
 
+const allowedOrigins = [
+  'https://fund-vision-kappa.vercel.app',
+  'https://fund-vision-git-main-vamjakrishs-projects.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map(s => s.trim()) : [])
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow non-browser requests (mobile apps, Postman, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    const isExplicit = allowedOrigins.some(o => o.toLowerCase() === origin.toLowerCase());
+    const isVercel = /^https:\/\/[a-zA-Z0-9_.-]+\.vercel\.app$/.test(origin);
+    const isLocal = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+    if (isExplicit || isVercel || isLocal) {
+      return callback(null, true);
+    }
+    // Allow by default to prevent cross-origin blocks for custom frontend deployments
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Set-Cookie']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
   message: { success: false, message: 'Too many requests, please try again later.' }
 });
 app.use('/api', limiter);
+
+// Root Status Route
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'FundVision API is running',
+    version: '2.0.0',
+    endpoints: {
+      health: '/api/health',
+      campaigns: '/api/campaigns',
+      blockchain: '/api/blockchain/status'
+    }
+  });
+});
 
 // Body Parsing
 app.use(express.json({ limit: '50mb' }));
