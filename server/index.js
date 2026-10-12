@@ -30,13 +30,15 @@ const app = express();
 const server = http.createServer(app);
 
 // Allowed frontend origins
+// const allowedOrigins = [
+//   process.env.CLIENT_URL,
+//   'http://localhost:5173',
+//   'http://localhost:3000',
+// ]
+
 const allowedOrigins = [
-  process.env.CLIENT_URL,
-  'http://localhost:5173',
-  'http://localhost:3000',
-]
-  .filter(Boolean)
-  .map((origin) => origin.replace(/\/+$/, ''));
+  'https://fund-vision-git-main-vamjakrishs-projects.vercel.app',
+];
 
 // CORS configuration
 const corsOptions = {
